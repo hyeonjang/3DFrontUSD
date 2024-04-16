@@ -48,6 +48,15 @@ python front_to_usd.py DATAPATH
 - [ ] Lights
 - [ ] Materials
 
+#### 3D Front USD plugins
+
+Current included metadata.
+- [ ] super-category
+- [ ] category
+- [ ] style
+- [ ] theme
+- [ ] material
+
 ## Authors
 
 If you have any issue for this repo, please feel free to contact Hyeonjang An at <ahj1218@kisti.re.kr>.
