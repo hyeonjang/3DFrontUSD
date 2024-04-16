@@ -1,9 +1,6 @@
-import json, logging
+import json, logging, argparse
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor
-
-DATASET_PATH = "/SceneGraph/datasets/3d-future-usd/raw/"
-
 from tqdm import tqdm
 from pxr import Usd
 
@@ -80,13 +77,13 @@ def parellal_excute(indir, outdir, function):
 # 
 # Object
 # 
-def convert_object():
+def convert_object(indir, outdir):
 
-    outdir = Path(DATASET_PATH, 'model')
+    outdir = Path(outdir, 'model')
     outdir.mkdir(exist_ok=True, parents=True)
 
     # run sequencely
-    pathlist = list(Path("datasets/3d-future/3D-FUTURE-model").glob("*"))
+    pathlist = list(Path(indir).glob("*"))
     new_directory = Path(outdir)
 
     metadata = process_metadata(pathlist[0].parent)
@@ -94,5 +91,10 @@ def convert_object():
         future_to_usd(path, new_directory, metadata)
     return
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-i', help='3D future dataset folder')
+parser.add_argument('-o', help='Your USD output path')
+args = parser.parse_args()
+
 if __name__ == "__main__": 
-    convert_object()
+    convert_object(args.i, args.o)

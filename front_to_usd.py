@@ -1,14 +1,21 @@
-import os, json
+import os, json, argparse
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor
 
-DATASET_PATH = "/SceneGraph/datasets/3d-future-usd/raw/"
-os.environ['PXR_PLUGINPATH_NAME'] = DATASET_PATH + (os.environ['PXR_PLUGINPATH_NAME'] if os.environ['PXR_PLUGINPATH_NAME'] else '')
+os.environ['PXR_PLUGINPATH_NAME'] = os.getcwd() + (os.environ['PXR_PLUGINPATH_NAME'] if os.environ['PXR_PLUGINPATH_NAME'] else '')
 
 import numpy as np
 from tqdm import tqdm
 from pxr import Usd, UsdGeom, UsdShade
 from pxr import Sdf, Kind, Gf, Vt
+
+def to_camel_case(text):
+    words = text.replace('-', '').split()
+    # Convert the first word to lowercase and the rest to title case
+    camel_case_words = [words[0].capitalize()] + [word.capitalize() for word in words[1:]]
+    # Join the words together
+    camel_case_text = ''.join(camel_case_words)
+    return camel_case_text
 
 def encode_uuid_to_path(uuid_str):
     # Mapping for hexadecimal to alphabet
@@ -249,11 +256,16 @@ def parellal_excute(indir, outdir, function):
     with ProcessPoolExecutor() as executor:
         executor.map(function, [path for path in pathlist if path.is_dir()], [str(new_directory)]*len(list(pathlist)))
 
-def convert_scene():
-    outdir = Path(DATASET_PATH)
+def convert_scene(indir, outdir):
+    outdir = Path(outdir)
     outdir.mkdir(exist_ok=True, parents=True)
-    sequence_excute("datasets/3d-future/3D-FRONT/", outdir, FrontToUSD)
+    sequence_excute(indir, outdir, FrontToUSD)
     return
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-i', help='3D front dataset folder')
+parser.add_argument('-o', help='Your USD output path')
+args = parser.parse_args()
+
 if __name__ == "__main__": 
-    convert_scene()
+    convert_scene(args.i, args.o)
