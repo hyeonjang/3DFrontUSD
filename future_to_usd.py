@@ -1,3 +1,12 @@
+import json, logging
+from pathlib import Path
+from concurrent.futures import ProcessPoolExecutor
+
+DATASET_PATH = "/SceneGraph/datasets/3d-future-usd/raw/"
+
+from tqdm import tqdm
+from pxr import Usd
+
 # 
 # Object
 # 
@@ -47,7 +56,6 @@ def future_to_usd(path, new_directory, metadata):
         logging.warning(f'{path.name}: {e}')
 
     return
-
 
 # 
 # execution
