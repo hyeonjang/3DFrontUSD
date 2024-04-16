@@ -30,15 +30,16 @@ If you want to build your own environment, please refer to the original reposito
 
 ### Executing program
 
+`YOUR_FOLDER` should be same for the both commands.
 To convert dataset files, use the following commands:
 
 * Furniture convertor
 ```
-python future_to_usd.py DATAPATH
+python future_to_usd.py -i 3D_FUTURE_DATASET_PATH -o YOUR_FOLDER
 ```
 * Front convertor
 ```
-python front_to_usd.py DATAPATH
+python front_to_usd.py -i 3D_FRONT_DATASET_PATH -o YOUR_FOLDER
 ```
 
 #### Front including features
