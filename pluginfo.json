@@ -1,0 +1,37 @@
+{
+    "Plugins": [
+        {
+            "Name": "3DFutureMetaData",
+            "Type": "resource",
+            "Info": {
+                "SdfMetadata": {
+                    "super-category": {
+                        "type": "string",
+                        "appliesTo": "prims",
+                        "default": "None"
+                    },
+                    "category": {
+                        "type": "string",
+                        "appliesTo": "prims",
+                        "default": "None"
+                    },
+                    "style": {
+                        "type": "string",
+                        "appliesTo": "prims",
+                        "default": "None"
+                    },
+                    "theme": {
+                        "type": "string",
+                        "appliesTo": "prims",
+                        "default": "None"
+                    },
+                    "material": {
+                        "type": "string",
+                        "appliesTo": "prims",
+                        "default": "None"
+                    }
+                }
+            }
+        }
+    ]
+ }
