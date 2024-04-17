@@ -29,11 +29,11 @@ apt-get update && apt-get install -y --no-install-recommends \
 	libxcursor-dev \
 	libxinerama-dev \
 	libxi-dev && \
-	rm -rf /var/lib/apt/lists/* && \
-	pip3 install -U Jinja2 argparse pillow numpy && \
-	mkdir -p xrutils && \
-	git clone --branch "v23.11" --depth 1 https://github.com/PixarAnimationStudios/USD.git usd && \
-	python3 usd/build_scripts/build_usd.py usd/build/ --no-examples --no-tutorials --no-imaging --no-usdview --no-materialx --no-draco --build-variant release
+	rm -rf /var/lib/apt/lists/*
+
+pip3 install -U Jinja2 argparse pillow numpy && \
+git clone --branch "v23.11" --depth 1 https://github.com/PixarAnimationStudios/USD.git usd && \
+python3 usd/build_scripts/build_usd.py usd/build/ --no-examples --no-tutorials --no-imaging --no-usdview --no-materialx --no-draco --build-variant release
 
 export PATH="usd/build/bin:$PATH"
 export LD_LIBRARY_PATH="usd/build/lib:$LD_LIBRARY_PATH"
