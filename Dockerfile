@@ -9,21 +9,21 @@
 # For more information on USD tools, visit https://github.com/PixarAnimationStudios/USD
 FROM python:3.10-slim-bookworm
 
-LABEL MAINTAINER PLATTAR(www.plattar.com)
-
 # our binary versions where applicable
+ENV WORK_DIR="/usd/"
+WORKDIR WORK_DIR
+
 ENV USD_VERSION="23.11"
 
 # Update the environment path for Pixar USD
-ENV USD_BUILD_PATH="/usr/src/app/xrutils/usd"
-ENV USD_PLUGIN_PATH="/usr/src/app/xrutils/usd/plugin/usd"
+ENV USD_BUILD_PATH="${WORK_DIR}/usd"
+ENV USD_PLUGIN_PATH="${USD_BUILD_PATH}/plugin/usd"
 ENV USD_BIN_PATH="${USD_BUILD_PATH}/bin"
 ENV USD_LIB_PATH="${USD_BUILD_PATH}/lib"
 ENV PATH="${PATH}:${USD_BIN_PATH}"
 ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${USD_LIB_PATH}"
 ENV PYTHONPATH="${PYTHONPATH}:${USD_LIB_PATH}/python"
 
-WORKDIR /usr/src/app
 
 # Required for compiling the USD source
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -52,6 +52,6 @@ RUN apt-get update && apt-get install -y libopencv-dev openimageio-tools libopen
     cmake --build   ./USD-Fileformat-plugins/build --config release && \
     cmake --install ./USD-Fileformat-plugins/build --config release
 
-ENV PATH="$PATH:./USD-Fileformat-plugins/bin/bin:./USD-Fileformat-plugins/bin/plugin/usd"
-ENV LD_LIBRARY_PATH="$LD_LIBRARY_PATH:./USD-Fileformat-plugins/bin/lib:./USD-Fileformat-plugins/bin/lib64"
-ENV PXR_PLUGINPATH_NAME="$PXR_PLUGINPATH_NAME:./USD-Fileformat-plugins/bin/plugin/usd"
+ENV PATH="$PATH:${WORK_DIR}/USD-Fileformat-plugins/bin/bin:${WORK_DIR}/USD-Fileformat-plugins/bin/plugin/usd"
+ENV LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${WORK_DIR}/USD-Fileformat-plugins/bin/lib:./USD-Fileformat-plugins/bin/lib64"
+ENV PXR_PLUGINPATH_NAME="$PXR_PLUGINPATH_NAME:${WORK_DIR}/USD-Fileformat-plugins/bin/plugin/usd"
