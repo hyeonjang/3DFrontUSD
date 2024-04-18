@@ -1,7 +1,9 @@
-import json, logging, argparse
+import os, json, logging, argparse
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor
 from tqdm import tqdm
+
+os.environ['PXR_PLUGINPATH_NAME'] = str(Path(__file__).parent.resolve()) + ":" + (os.environ['PXR_PLUGINPATH_NAME'] if os.environ['PXR_PLUGINPATH_NAME'] else '')
 from pxr import Usd
 
 # 
@@ -34,10 +36,6 @@ def future_to_usd(path, new_directory, metadata):
     # new path
     new_path = new_directory/path.name
     new_path.mkdir(exist_ok=True)
-
-    # check already existing
-    # if Path(new_path/"raw_model.usda").exists():
-        # return
 
     try:
         stage = Usd.Stage.Open(str(path.joinpath(f"raw_model.obj:SDF_FORMAT_ARGS:objAssetsPath={new_path}&objPhong=true")))

@@ -2,7 +2,7 @@ import os, json, argparse
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor
 
-os.environ['PXR_PLUGINPATH_NAME'] = os.getcwd() + (os.environ['PXR_PLUGINPATH_NAME'] if os.environ['PXR_PLUGINPATH_NAME'] else '')
+os.environ['PXR_PLUGINPATH_NAME'] = os.getcwd() + ":" + (os.environ['PXR_PLUGINPATH_NAME'] if os.environ['PXR_PLUGINPATH_NAME'] else '')
 
 import numpy as np
 from tqdm import tqdm
