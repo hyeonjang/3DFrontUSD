@@ -72,7 +72,7 @@ python future_to_usd.py -i 3D_FUTURE_DATASET_PATH -o YOUR_FOLDER
 ```
 * Front convertor
 ```
-python front_to_usd.py -i 3D_FRONT_DATASET_PATH -o YOUR_FOLDER
+python front_to_usd.py -i 3D_FRONT_DATASET_PATH -m 3D_FUTURE_DATASET_PATH -o YOUR_FOLDER
 ```
 
 #### Front including features

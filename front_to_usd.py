@@ -2,7 +2,7 @@ import os, json, argparse
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor
 
-os.environ['PXR_PLUGINPATH_NAME'] = os.getcwd() + ":" + (os.environ['PXR_PLUGINPATH_NAME'] if os.environ['PXR_PLUGINPATH_NAME'] else '')
+os.environ['PXR_PLUGINPATH_NAME'] = str(Path(__file__).parent.resolve()) + ":" + (os.environ['PXR_PLUGINPATH_NAME'] if os.environ['PXR_PLUGINPATH_NAME'] else '')
 
 import numpy as np
 from tqdm import tqdm
@@ -41,13 +41,14 @@ def decode_path_to_uuid(encoded_str):
 from scipy.spatial.transform import Rotation as R
 
 class FrontToUSD():
-    def __init__(self, path, directory, debug=False):
+    def __init__(self, path, modeldir, directory, debug=False):
         # mkdir /scene dir
         self.source_directory = directory
         self.target_directory = path.parent
 
         self.scene_directory = self.source_directory
         self.material_directory = self.source_directory/'texture'
+        self.model_directory = modeldir
 
         usd_path_base = f"{self.scene_directory}/{path.stem}"
         file_extension = '.usda' if debug else '.usd'
@@ -176,13 +177,21 @@ class FrontToUSD():
 
     # add furniture to scene as reference
     def add_object_ref_to_stage(self):
+
+        def find_model_path(jid):
+            fold = Path(self.model_directory, jid)
+            for file_path in fold.glob('*.usd'):
+                return str(file_path)
+
         for object in self.objects:
             path = self.REFERENCE_ID.get(object['uid'])
             if path is None:
                 continue
             if "valid" in object and object["valid"]:
                 ref_prim = self.stage.GetPrimAtPath(f'/{path}')
-                ref_prim.GetReferences().AddReference(f'./model/{object["jid"]}/raw_model.usd')
+                ref_name = find_model_path(object["jid"])
+                if ref_name is not None:
+                    ref_prim.GetReferences().AddReference(ref_name)
             else:
                 self.stage.RemovePrim(path)
                 
@@ -239,12 +248,12 @@ class FrontToUSD():
 # 
 # execution
 # 
-def sequence_excute(indir, outdir, Class):
+def sequence_excute(indir, modeldir, outdir, Class):
     pathlist = list(Path(indir).glob("*"))
     new_directory = Path(outdir)
 
     for path in tqdm(pathlist):      
-        function = Class(path, new_directory)
+        function = Class(path, modeldir, new_directory)
         function()
     return
 
@@ -256,16 +265,17 @@ def parellal_excute(indir, outdir, function):
     with ProcessPoolExecutor() as executor:
         executor.map(function, [path for path in pathlist if path.is_dir()], [str(new_directory)]*len(list(pathlist)))
 
-def convert_scene(indir, outdir):
+def convert_scene(indir, modeldir, outdir):
     outdir = Path(outdir)
     outdir.mkdir(exist_ok=True, parents=True)
-    sequence_excute(indir, outdir, FrontToUSD)
+    sequence_excute(indir, modeldir, outdir, FrontToUSD)
     return
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', help='3D front dataset folder')
+parser.add_argument('-m', help='USD 3D future dataset folder')
 parser.add_argument('-o', help='Your USD output path')
 args = parser.parse_args()
 
 if __name__ == "__main__": 
-    convert_scene(args.i, args.o)
+    convert_scene(args.i, args.m, args.o)

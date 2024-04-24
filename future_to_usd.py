@@ -38,17 +38,23 @@ def future_to_usd(path, new_directory, metadata):
     new_path.mkdir(exist_ok=True)
 
     try:
-        stage = Usd.Stage.Open(str(path.joinpath(f"raw_model.obj:SDF_FORMAT_ARGS:objAssetsPath={new_path}&objPhong=true")))
+        # open as usd file, assumption one file in one folder
+        for file_path in path.glob('*.obj'):
+            print(file_path)
+            stage = Usd.Stage.Open(f"{file_path}:SDF_FORMAT_ARGS:objAssetsPath={new_path}&objPhong=true")
 
-        metainfo = metadata.get(path.name)
-        prim = stage.GetPrimAtPath("/raw_model")
+            # set metadata
+            if metadata is not None:
+                metainfo = metadata.get(path.name)
+                prim = stage.GetPrimAtPath("/raw_model")
 
-        for key, value in metainfo.items():
-            prim.SetMetadata(key, value)
+                for key, value in metainfo.items():
+                    prim.SetMetadata(key, value)
 
-        stage.Export(str(new_path/"raw_model.usd"))
+            stage.Export(str(new_path/f"{file_path.stem}.usd"))
     except Exception as e:
         logging.warning(f'{path.name}: {e}')
+        raise Exception('Exception: Check logfile')
 
     return
 
@@ -82,9 +88,14 @@ def convert_object(indir, outdir):
 
     # run sequencely
     pathlist = list(Path(indir).glob("*"))
-    new_directory = Path(outdir)
 
-    metadata = process_metadata(pathlist[0].parent)
+    # find model_json.info
+    metadata = None
+    for path in pathlist:
+        if path.name == "model_info.json":
+            metadata = process_metadata(pathlist[0].parent)
+
+    new_directory = Path(outdir)
     for path in tqdm(pathlist):      
         future_to_usd(path, new_directory, metadata)
     return

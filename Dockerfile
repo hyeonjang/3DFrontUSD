@@ -56,6 +56,6 @@ RUN apt-get update && apt-get install -y libopencv-dev openimageio-tools libopen
 
 RUN pip3 install -U tqdm scipy numpy
 
-ENV PATH="$PATH:${WORK_DIR}/USD-Fileformat-plugins/bin/bin:${WORK_DIR}/USD-Fileformat-plugins/bin/plugin/usd"
-ENV LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${WORK_DIR}/USD-Fileformat-plugins/bin/lib:${WORK_DIR}/USD-Fileformat-plugins/bin/lib64"
-ENV PXR_PLUGINPATH_NAME="$PXR_PLUGINPATH_NAME:${WORK_DIR}/USD-Fileformat-plugins/bin/plugin/usd"
+ENV PATH="${PATH}:${WORK_DIR}/USD-Fileformat-plugins/bin/bin:${WORK_DIR}/USD-Fileformat-plugins/bin/plugin/usd"
+ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${WORK_DIR}/USD-Fileformat-plugins/bin/lib:${WORK_DIR}/USD-Fileformat-plugins/bin/lib64"
+ENV PXR_PLUGINPATH_NAME="${PXR_PLUGINPATH_NAME}:${WORK_DIR}/USD-Fileformat-plugins/bin/plugin/usd"
