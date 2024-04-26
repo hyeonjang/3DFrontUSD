@@ -1,4 +1,4 @@
-import os, json, argparse
+import re, os, json, argparse
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor
 
@@ -38,8 +38,6 @@ def decode_path_to_uuid(encoded_str):
     decoded = ''.join(alpha_to_hex.get(char, char) for char in encoded_str)
     return decoded
 
-from scipy.spatial.transform import Rotation as R
-
 class FrontToUSD():
     def __init__(self, path, modeldir, directory, debug=False):
         # mkdir /scene dir
@@ -50,12 +48,13 @@ class FrontToUSD():
         self.material_directory = self.source_directory/'texture'
         self.model_directory = modeldir
 
-        usd_path_base = f"{self.scene_directory}/{path.stem}"
+        usd_path_base = Path(self.scene_directory, path.stem)
         file_extension = '.usda' if debug else '.usd'
-        usd_path = usd_path_base + file_extension
+        usd_path = usd_path_base.with_suffix(file_extension)
 
         # one usd per json
-        self.stage = Usd.Stage.CreateNew(usd_path)
+        self.path = usd_path
+        self.stage = Usd.Stage.CreateNew(str(self.path))
         with open(path, 'r') as file:
             data = json.load(file)
             self.scene = data["scene"]
@@ -131,20 +130,19 @@ class FrontToUSD():
         
         # reset XformOpOrder
         xformable.SetXformOpOrder([])
+       
+        # translation
+        translate = dictionary.get('pos', [1, 1, 1])
+        xformable.AddTranslateOp().Set(Gf.Vec3f(translate))
 
         # translates the model based on the model info.
         rotation = dictionary.get('rot', [0, 0, 0, 1])
-        rot = np.array(rotation)
-        quaternion = R.from_quat(rot)
-        euler_angles_degrees = quaternion.as_euler('xyz', degrees=True)
-
+        quat = Gf.Rotation(Gf.Quatf(rotation[3], rotation[0], rotation[1], rotation[2]))
+        xformable.AddRotateXYZOp().Set(quat.GetAxis() * quat.GetAngle()) 
+        
         # add as the original sequence in 3D future reader
         scale = dictionary.get('scale', [1, 1, 1])
         xformable.AddScaleOp().Set(Gf.Vec3f(scale))
-
-        translate = dictionary.get('pos', [1, 1, 1])
-        xformable.AddTranslateOp().Set(Gf.Vec3f(translate))
-        xformable.AddRotateXYZOp().Set(Gf.Vec3f(list(euler_angles_degrees))) 
 
     # prim
     def add_prim_and_xform_to_stage(self):
@@ -155,25 +153,14 @@ class FrontToUSD():
         for rooms in self.scene["room"]:
 
             # global transformation
-            rooms_name = 'Scene/' + rooms["instanceid"].replace("-", "")
+            rooms_name = 'Scene/' + rooms["instanceid"].replace("-", "_")
             rooms_prim = self.stage.DefinePrim(f'/{rooms_name}', "Xform")
             self.xform_to_prim(rooms_prim, rooms)
 
             # for each room
             for room in rooms["children"]:
-
                 instances = room['instanceid'].split('/')                
-                prim_path = f'{rooms_name}'
-                for instance in instances:
-                    prim_path += "/" + encode_uuid_to_path(instance)
-                    room_prim = self.stage.DefinePrim(f'/{prim_path}', 'Xform')
-
-                self.REFERENCE_ID[room['ref']] = prim_path
-                self.xform_to_prim(room_prim, room)
-
-                # set group kind
-                model = Usd.ModelAPI(room_prim)
-                model.SetKind(Kind.Tokens.group)
+                self.REFERENCE_ID[room['ref']] = (instances, rooms_name, room)
 
     # add furniture to scene as reference
     def add_object_ref_to_stage(self):
@@ -183,28 +170,59 @@ class FrontToUSD():
             for file_path in fold.glob('*.usd'):
                 return str(file_path)
 
-        for object in self.objects:
-            path = self.REFERENCE_ID.get(object['uid'])
-            if path is None:
-                continue
-            if "valid" in object and object["valid"]:
-                ref_prim = self.stage.GetPrimAtPath(f'/{path}')
-                ref_name = find_model_path(object["jid"])
-                if ref_name is not None:
-                    ref_prim.GetReferences().AddReference(ref_name)
-            else:
-                self.stage.RemovePrim(path)
-                
+        # 
+        def make_prim_name(name):
+            new_name = name.split("/")[-1]
+            if new_name[0].isnumeric():
+                new_name = "X" + new_name[1:]
+            process = re.sub(r"[ ()+&-]", "_", new_name)
+            return re.sub(r'_+', '_', process)
+
+        for objc in self.objects:
+            (room_instance_id, prim_path, room) = self.REFERENCE_ID.get(objc['uid'], (None, None, None))
+            
+            if prim_path is not None:
+                title = objc.get('title', None)
+                title = objc.get('category', "empty") if title is None or title == "" else title
+                title = "empty" if title == "" else title
+
+                furn_name = prim_path + "/" + room_instance_id[0]
+                model = Usd.ModelAPI(self.stage.DefinePrim(f'/{furn_name}', 'Xform'))
+                model.SetKind(Kind.Tokens.group)
+
+                name =  furn_name + "/" + make_prim_name(title) + "_" + room_instance_id[1]
+                print(name)
+
+                ref_prim = self.stage.DefinePrim(f'/{name}', 'Xform')
+                self.xform_to_prim(ref_prim, room)
+
+                if "valid" in objc and objc["valid"]:
+                    ref_name = find_model_path(objc["jid"])
+                    if ref_name is not None:
+                        ref_prim.GetReferences().AddReference(ref_name)
+            
+                # set group kind
+                model = Usd.ModelAPI(ref_prim)
+                model.SetKind(Kind.Tokens.group)
+            
     # read room mesh (wall, ceil, floor) and convert to usd
     def add_room_comp_to_stage(self):
         for room_comp in self.room_comps:
 
             # object-level wall, floor, and someting
-            path = self.REFERENCE_ID[room_comp['uid']]
+            (room_instance_id, prim_path, room) = self.REFERENCE_ID[room_comp['uid']]
 
             # real mesh from data 
-            # processing mesh
-            mesh = self.stage.DefinePrim(f'/{path}', "Mesh")
+            model = Usd.ModelAPI(self.stage.DefinePrim(f'/{prim_path}', "Xform"))
+            model.SetKind(Kind.Tokens.group)
+
+            room_name = prim_path + "/room"
+            model = Usd.ModelAPI(self.stage.DefinePrim(f'/{room_name}', 'Xform'))
+            model.SetKind(Kind.Tokens.group)
+
+            type_name = room_comp['type'] if room_comp['type'] != "" else "empty" 
+            name = room_name + "/" + type_name + "_" + room_instance_id[1]
+            mesh = self.stage.DefinePrim(f'/{name}', "Mesh")
 
             # set material
             mtl_path = self.MATERIAL_ID.get(room_comp['material'], None)
@@ -216,7 +234,7 @@ class FrontToUSD():
             model = Usd.ModelAPI(mesh)
             model.SetKind(Kind.Tokens.component)
 
-            mesh = self.stage.GetPrimAtPath(f'/{path}')
+            mesh = self.stage.GetPrimAtPath(f'/{name}')
             mesh.SetMetadata('category', room_comp['type'])
 
             # reassign to call API
@@ -249,7 +267,7 @@ class FrontToUSD():
 # execution
 # 
 def sequence_excute(indir, modeldir, outdir, Class):
-    pathlist = list(Path(indir).glob("*"))
+    pathlist = list(Path(indir).glob("*.json"))
     new_directory = Path(outdir)
 
     for path in tqdm(pathlist):      
